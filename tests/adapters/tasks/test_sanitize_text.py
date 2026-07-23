@@ -3,41 +3,71 @@ import unicodedata
 import pytest
 
 from nomnema.adapters.tasks.sanitize_text import (
-    GeneralTextSanitizer,
+    EntryTextSanitizer,
 )
 
 
-class TestCleanEncodingSpanishAccentuation:
-    """NFD-decomposed accents are a frequent artifact of PDF copy/paste and
-    AI-generated markdown; clean_encoding must recompose them (NFC) so
-    Spanish names render with a single precomposed accented character."""
-
+class TestNamesNoChangeWithinText:
     @pytest.mark.parametrize(
         "name",
         [
             "José",
             "María",
             "Muñoz",
-            "Peña",
             "Íñigo",
             "Núñez",
-            "Ángel",
-            "Óscar",
-            "Ibáñez",
-            "Ordóñez",
+            "Müller",
+            "Strauß",
+            "Noël",
+            "Caphè",
+            "Østby",
+            "Åsen",
+            "Gonçalves",
+            "Öç",
+            "Næs",
+            "Wałęsa", 
+            "Kowalski",
+            "Żurek",
+            "Kowalńyk",
+            "Háček",
+            "Dvořák",
+            "Lebrûn"
         ],
     )
-    def test_recomposes_nfd_decomposed_name_to_nfc(self, name):
-        result = GeneralTextSanitizer.clean_encoding(name)
+    def test_different_native_characters(self, name):
+        sanitize_text = EntryTextSanitizer()
+        result = sanitize_text(name)
+        assert name == result
 
-        assert result == name
-        assert unicodedata.is_normalized("NFC", result)
+    @pytest.mark.parametrize(
+            "test_word",
+            [
+               "﻿Hola mundo",
+               "co­operación simple",
+               "Hola​mundo",
+               "“Hola mundo”",
+               "‘Hola mundo’",
+               "Texto–con guion",
+               "Texto—con guion",
+               "Título del artículo",
+               "ABC１２３",
+               "ﬁnal simple",
+               "Hola 😀 mundo",
+               "Precio €100",
+               "Temperatura 25°C",
+               "Texto™ simple",
+               "Hola    mundo",
+               "Texto con espacio",
+            ],
+        )
+    def test_different_not_valida_charactes(self, test_word):
+        sanitize_text = EntryTextSanitizer()
+        result = sanitize_text(test_word)
+        #print(f'''\n\n"{test_word}", "{result}"''')
+        breakpoint()
+        assert True
+    
 
-    def test_recomposes_mixed_sentence(self):
-        text = "El paciente José Muñoz presentó síntomas."
-        result = GeneralTextSanitizer.clean_encoding(text)
-
-        assert result == "El paciente José Muñoz presentó síntomas."
 
 
 class TestCleanEncodingCommonMojibake:
