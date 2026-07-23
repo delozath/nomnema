@@ -1,6 +1,6 @@
 *.csv#
 *.pyc
-*.env
+*.env*
 src/nomnema/experimental/
 hydra
 settings.json

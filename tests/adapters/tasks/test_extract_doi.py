@@ -10,37 +10,40 @@ from nomnema.adapters.tasks.extract_doi import (
 
 class TestExtractDOIfromMarkdown:
     @pytest.mark.parametrize(
-        ("environment_variable", "expected_doi"),
+        ("env_pfname", "env_doi"),
         [
-            ("PDF_FILE_TEST_1", "10.1016/j.cmpb.2024.108283"),
-            ("PDF_FILE_TEST_2", "10.1016/j.inffus.2025.103768"),
-            ("PDF_FILE_TEST_3", "10.1016/j.shj.2026.100849"),
-            ("PDF_FILE_TEST_4", "10.1371/journal.pone.0324285"),
+            ("PDF_EXAMPLE_1", "DOI_EXAMPLE_1"),
+            ("PDF_EXAMPLE_2", "DOI_EXAMPLE_2"),
+            ("PDF_EXAMPLE_3", "DOI_EXAMPLE_3")
         ],
     )
     def test_extract_doi_returns_doi_from_plain_text(
-        self, environment_variable, expected_doi
+        self, env_pfname, env_doi
     ):
-        load_dotenv()
-        test_file = os.getenv(environment_variable)
+        load_dotenv(".env-test")
+        test_file = os.getenv(env_pfname)
+        test_doi = os.getenv(env_doi)
         result = ExtractDOIfromMarkdown.perform(test_file)
 
-        assert result == expected_doi
+        assert result == test_doi
 
 
 class TestFetchBibEntryfromDOI2Bibtex:
     @pytest.mark.parametrize(
-        ("test_doi", "title_extract"),
+        ("fetch_doi", "title_extract"),
         [
-          ("10.1016/j.cmpb.2024.108283", "An algorithm to detect"),
-          ("10.1016/j.inffus.2025.103768", "Ultrasound image segmentation"),
-          ("10.1016/j.shj.2026.100849", "Prognostic Utility of the Dicrotic Notch"),
-          ("10.1371/journal.pone.0324285", "valuating the effectiveness of data governance frameworks"),
+          ("DOI_FETCH_1", "DOI_FETCH_EXTRACT_1"),
+          ("DOI_FETCH_2", "DOI_FETCH_EXTRACT_2"),
+          ("DOI_FETCH_3", "DOI_FETCH_EXTRACT_3"),
+          ("DOI_FETCH_4", "DOI_FETCH_EXTRACT_4"),
         ],
     )
     def test_fetch_bib_entry_from_doi(
-        self, test_doi, title_extract
+        self, fetch_doi, title_extract
     ):
+        load_dotenv(".env-test")
+        test_doi = os.getenv(fetch_doi)
+        test_content = os.getenv(title_extract)
 
         result = FetchBibEntryfromDOI2Bibtex().perform(test_doi, timeout_s=10.0)
-        assert title_extract in result
+        assert test_content in result
