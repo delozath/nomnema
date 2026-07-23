@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "Nomnema"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+dependencies = [
+    "hydra-core",
+]
+
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+addopts = [
+    "-ra",
+    "-v",
+]
+
+markers = [
+   "adapter: testing adapter",
+   "domain: testing domain",
+   "storage: testing storage",
+]
