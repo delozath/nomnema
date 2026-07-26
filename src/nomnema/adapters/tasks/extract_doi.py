@@ -1,10 +1,5 @@
-import re
-from typing import override
-
-from polars import first
 
 from markitdown import MarkItDown
-
 
 import requests
 

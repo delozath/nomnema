@@ -114,8 +114,8 @@ class TestFetchAbstractChain:
         ("test_doi", "fetcher", "params"),
         [
           ("https://dx.doi.org/10.1016/j.cmpb.2024.108283", "fetch abstract from PubMed DOI", {}),
-          ("https://dx.doi.org/10.1371/journal.pone.0324285", "fetch abstract from PubMed DOI", {'clean': True}),
-          ("https://dx.doi.org/10.3102/0162373709352369", "fetch abstract from Crossref DOI", {'clean': True}),
+          ("https://dx.doi.org/10.1371/journal.pone.0324285", "fetch abstract from PubMed DOI", {'clear': True}),
+          ("https://dx.doi.org/10.3102/0162373709352369", "fetch abstract from Crossref DOI", {'clear': True}),
           ("https://dx.doi.org/10.1002/anie.202006283", "fetch abstract from PubMed DOI", {}), # is in PubMed also
         ],
     )

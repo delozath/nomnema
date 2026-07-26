@@ -1,5 +1,4 @@
-bib_database: null
+bib_db: null
 doi: null
-path_origin: home
-path_destination: home/pdfs
-fname: none
+origin: home
+destination: home/pdfs

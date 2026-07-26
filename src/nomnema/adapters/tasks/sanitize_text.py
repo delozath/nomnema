@@ -1,6 +1,5 @@
 import re
-from typing import Optional, override
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import unicodedata as ud
 from dataclasses import dataclass
