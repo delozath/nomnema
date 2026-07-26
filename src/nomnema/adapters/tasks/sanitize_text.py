@@ -9,7 +9,8 @@ from nomnema.domain.const import (
     UNICODE_REPLACEMENTS,
     DEFAULT_PUNCTUATION,
     BIBLATEX_ESCAPE,
-    BIBLATEX_VERBATIM_FIELDS
+    BIBLATEX_VERBATIM_FIELDS,
+    NAME_SPECIAL_LETTERS
 )
 
 
@@ -79,50 +80,34 @@ class BibLaTeXEscaper:
         return text.translate(BIBLATEX_ESCAPE)
 
 
+@dataclass(frozen=True, slots=True)
+class BibKeyNormalizer:
+    separator: str = "-"
 
+    def __call__(self, value: str) -> str:
+        if not isinstance(value, str):
+            raise TypeError(
+                f"Expected str, got {type(value).__name__}"
+            )
 
+        key = self._to_ascii(value)
+        key = re.sub(r"[^a-z0-9]+", self.separator, key)
+        key = key.strip(self.separator)
 
-class tmp:
-    def clean_bibkey(self, bib_entry: dict) -> dict:
-        """
-        Sanitize BibLaTeX entry key by removing underscores and normalizing encoding.
+        if not key:
+            raise ValueError(
+                "The value does not produce a valid BibLaTeX key"
+            )
 
-        Parameters
-        ----------
-        bib_entry : dict
-            BibLaTeX entry as a dictionary.
+        return key[:1].upper() + key[1:]
 
-        Returns
-        -------
-        dict
-            BibLaTeX entry with cleaned key in ASCII format.   
-        """
-        bib_entry['ID'] = (
-                unicodedata.normalize(
-                    'NFKD',
-                    bib_entry['ID'].replace('_', '')
-             ).encode('ascii', 'ignore').decode('ascii'))
+    @staticmethod
+    def _to_ascii(value: str) -> str:
+        value = value.casefold().translate(NAME_SPECIAL_LETTERS)
+        value = ud.normalize("NFKD", value)
 
-        return bib_entry
-    
-    def clean_fields(self, bib_entry: dict) -> dict:
-        """
-        Clean BibLaTeX entry fields by normalizing encoding and replacing LaTeX special characters.
-
-        Parameters
-        ----------
-        bib_entry : dict
-            BibLaTeX entry as a dictionary.
-
-        Returns
-        -------
-        dict
-            BibLaTeX entry with cleaned fields. 
-        """
-        for k in [k for k in bib_entry.keys() if k not in ['ID', 'year']]:
-            tmp = unicodedata.normalize('NFC', bib_entry[k])
-            for old, new in self.latex_chars:
-                tmp = tmp.replace(old, new).replace("4â€“", '-')
-            bib_entry[k] = tmp
-        
-        return bib_entry
+        return "".join(
+            char
+            for char in value
+            if char.isascii() and not ud.combining(char)
+        )

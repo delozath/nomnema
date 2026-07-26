@@ -65,6 +65,7 @@ UNICODE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     ("−", "-"),
     ("﹘", "-"),
     ("﹣", "-"),
+    ("4â€“", '-'),
 
     # Ellipsis
     ("…", "..."),
@@ -157,6 +158,20 @@ UNICODE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
 DEFAULT_PUNCTUATION = frozenset(
     string.punctuation + "¿¡€$°™"
 )
+
+
+NAME_SPECIAL_LETTERS = str.maketrans({
+    "æ": "ae",
+    "œ": "oe",
+    "ø": "o",
+    "ł": "l",
+    "ð": "d",
+    "đ": "d",
+    "þ": "th",
+    "ħ": "h",
+    "ı": "i",
+    "ŋ": "n",
+})
 
 
 BIBLATEX_ESCAPE = str.maketrans({

@@ -4,7 +4,8 @@ import pytest
 
 from nomnema.adapters.tasks.sanitize_text import (
     EntryTextSanitizer,
-    BibLaTeXEscaper
+    BibLaTeXEscaper,
+    BibKeyNormalizer
 )
 
 
@@ -130,7 +131,33 @@ class TestBibLaTeXEscaper:
             ),
         ]
     )
-    def test_cases_latex_escaper(self, text_word, expected, field_type):
+    def test_cases_latex_escaper(self, test_word, expected, field_type):
         latex_esc = BibLaTeXEscaper()
-        result = latex_esc(text_word, field=field_type)
+        result = latex_esc(test_word, field=field_type)
+        assert result == expected
+
+
+class TestBibKeyNormalizer:
+    @pytest.mark.parametrize(
+        ("test_word", "expected"),
+        (
+            ("José", "Jose"),
+            ("Muñoz", "Munoz"),
+            ("Müller", "Muller"),
+            ("Strauß", "Strauss"),
+            ("Østby", "Ostby"),
+            ("Næs", "Naes"),
+            ("Wałęsa", "Walesa"),
+            ("Dvořák", "Dvorak"),
+            ("José Muñoz", "Jose-munoz"),
+            ("Jean-Luc Müller", "Jean-luc-muller"),
+        ),
+    )
+    def test_bibkey_normalizer(
+        self,
+        test_word: str,
+        expected: str,
+    ) -> None:
+        normalizer = BibKeyNormalizer()
+        result = normalizer(test_word)
         assert result == expected

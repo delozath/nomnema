@@ -192,7 +192,7 @@ FEATURE: Agregar referencia [ERROR]
 
 ### 2. domain
 - [ ] Pipeline registry — resuelve qué servicios/adapters concretos usa el Orchestrator en cada corrida
-- [ ] Sanitize text — lógica pura de limpieza/normalización de texto, sin dependencias externas
+- [x] Sanitize text — lógica pura de limpieza/normalización de texto, sin dependencias externas
 - [ ] Key/slug builder — lógica pura para construir y normalizar `AuthorYearMOD`
 - [ ] Error handling — manejo y propagación centralizada de los errores de dominio
 - [ ] Logging básico — registra eventos y errores a stdout/archivo (uso personal, sin auditoría formal)
@@ -219,11 +219,11 @@ FEATURE: Agregar referencia [ERROR]
 
 - [ ] DOI from PDF Service -> hereda de DOI given Service; obtiene el DOI a partir del PDF cuando no se provee directamente
   - [x] Extract DOI (usa `Extractor Interface`)
-  - [ ] Si succeed:
-    - [ ] Check DOI
-    - [ ] Retrieve DOI
-  - [ ] otro:
-    - [ ] raise error
+  - [x] Si succeed:
+    - [x] Check DOI
+    - [x] Retrieve DOI
+  - [x] otro:
+    - [x] raise error
 
 - [ ] MOD Resolution Service -> usa `Interactive Selector Interface`; determina el MOD final, con selección interactiva si hay colisión
   - [ ] Toma MOD de Config Interface (CLI/Hydra)
