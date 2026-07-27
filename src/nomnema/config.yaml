@@ -2,3 +2,4 @@ bib_db: null
 doi: null
 origin: home
 destination: home/pdfs
+fname_suffix: ''

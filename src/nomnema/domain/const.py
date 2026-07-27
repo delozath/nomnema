@@ -185,6 +185,10 @@ BIBLATEX_ESCAPE = str.maketrans({
     "}":  r"\}",
     "~":  r"\textasciitilde{}",
     "^":  r"\textasciicircum{}",
+    "<":  r"$<$",
+    ">":  r"$>$",
+    "≥":  r"$\ge$",
+    "≤":  r"$\eq$",
 })
 
 

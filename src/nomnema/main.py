@@ -17,8 +17,7 @@ import bibtexparser
 from bibtexparser.bibdatabase import BibDatabase
 from markitdown import MarkItDown
 
-from nomnema.adapters import retrieve_orchestrator
-from nomnema.adapters.retrieve_orchestrator import RetrieveOrchestrator
+from nomnema.services.retrieve_orchestrator import RetrieveOrchestrator
 
 @hydra.main(version_base=None, config_path=".", config_name="config")
 def orchestrator(cfg: DictConfig) -> None:

@@ -13,6 +13,7 @@ class BiblatexDriver:
             self.bib_db = bibtexparser.load(bib_file, parser=self.parser)
 
         self.cache_unique_doi = pd.DataFrame(self.bib_db.entries)['doi'].to_list()
+        self.bib_path = bib_path
     
     def entry2parser(self, bib_entry):
         parser = BibTexParser(interpolate_strings=False)
@@ -34,3 +35,7 @@ class BiblatexDriver:
         database.entries = [entry]
 
         return bibtexparser.dumps(database).strip()
+
+    def save(self):
+        with open(self.bib_path, 'w') as writer:
+            bibtexparser.dump(self.bib_db, writer)

@@ -1,92 +1,3 @@
-from omegaconf import DictConfig
-
-from nomnema.ports.core import BaseService
-
-from nomnema.storage.local_storage_validation import (
-    LocalFileStorageValidation,
-    LocalFolderStorageValidation,
-)
-
-from nomnema.adapters.tasks.extract_doi import (
-  ExtractDOIfromMarkdown,
-  FetchBibEntryfromDOI2Bibtex
-)
-
-from nomnema.adapters.tasks.extract_abstract import (
-    #FetchAbstractFromPubMedDOI,
-    #FetchAbstractFromCrossrefDOI,
-    FetchAbstractChain
-)
-
-from nomnema.adapters.tasks.sanitize_text import (
-    EntryTextSanitizer,
-    BibLaTeXEscaper,
-    BibKeyNormalizer
-)
-
-from nomnema.domain.biblatex import BiblatexDriver
-
-class RetrieveOrchestrator(BaseService):
-    def __init__(self, cfg: DictConfig, *args, **kwargs):
-        self.cfg = cfg
-
-        destination = cfg.get("destination", None)
-        if destination is None:
-            raise ValueError(f"param `destination` is required")
-        self.destination = (
-            LocalFolderStorageValidation(destination)
-                .perform(mode="check")
-            )
-
-        bib_db_path = cfg.get("bib_db", None)
-        if bib_db_path is None:
-            raise ValueError(f"param `bib_db` is required")
-        self.bib_db_path = (
-            LocalFileStorageValidation(bib_db_path)
-                .perform(mode="check")
-            )
-        
-        self.fetch_bib_entry = FetchBibEntryfromDOI2Bibtex()
-        self.entry_text_sanitizer = EntryTextSanitizer()
-        self.bib_driver = BiblatexDriver(bib_path=self.bib_db_path)
-    
-    def run(self, *args, **kwargs):
-        # file_biblatex = LocalFolderStorageValidation(self.pfname).perform(mode="check")
-        #origin = LocalFileStorageValidation(self.origin).perform(mode="check")
-        
-        origin = self.cfg.get("origin", None)
-        if origin is None:
-            raise ValueError(f"param `origin` is required")
-        origin = (
-            LocalFileStorageValidation(origin)
-                .perform(mode="check")
-            )
-        doi_candidate = ExtractDOIfromMarkdown.perform(origin)
-        entry_candidate = self.fetch_bib_entry.perform(doi_candidate, timeout_s=10.0)
-
-        fetch_chain = FetchAbstractChain(doi_candidate, 'omar@mail.net')
-        abstract_candidate, log_abstract_fetch = fetch_chain.run(clear=True)
-
-        if abstract_candidate=="":
-            raise ValueError(f"Failed to retrieve abstract for doi: {doi_candidate}")
-        
-        abstract = self.entry_text_sanitizer(abstract_candidate)
-
-        entry = self.bib_driver.append_abstract(entry_candidate, abstract)
-
-        if entry['doi'] in self.bib_driver.cache_unique_doi:
-            raise ValueError(f"Duplicate DOI found: {entry['doi']}")
-
-        bib_entry = self.bib_driver.dict_to_bibtex(entry)
-        #self.bib_driver.add_entry(entry)
-        bib_entry_edited, modified = process_text(bib_entry)
-
-
-
-
-
-
-
 import signal
 import threading
 import tkinter as tk
@@ -94,10 +5,7 @@ from tkinter import ttk
 from types import FrameType
 from typing import Optional
 
-
 class TextEditorWindow(tk.Toplevel):
-    """Ventana modal para editar texto."""
-
     def __init__(
         self,
         parent: tk.Misc,
@@ -110,14 +18,13 @@ class TextEditorWindow(tk.Toplevel):
 
         self.result_text = text
         self.was_modified = False
+        self.post_edit_biblatex_escape = False
 
         self.title(title)
-        self.geometry("700x450")
-        self.minsize(450, 300)
+        self.geometry("800x600")
+        self.minsize(920, 800)
 
-        # Se mantiene oculta mientras se construye.
         self.withdraw()
-
         self.protocol("WM_DELETE_WINDOW", self._cancel)
 
         self._build_ui()
@@ -137,7 +44,7 @@ class TextEditorWindow(tk.Toplevel):
             editor_frame,
             wrap=tk.WORD,
             undo=True,
-            font=("TkDefaultFont", 11),
+            font=("TkDefaultFont", 12),
         )
         self._text.grid(row=0, column=0, sticky="nsew")
 
@@ -162,23 +69,34 @@ class TextEditorWindow(tk.Toplevel):
             sticky="e",
         )
 
-        ttk.Button(
+        self._post_edit_biblatex_escape = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
             button_frame,
-            text="Cancelar",
-            command=self._cancel,
+            text="Apply BibLaTeX escaping after editing",
+            variable=self._post_edit_biblatex_escape,
         ).grid(
             row=0,
             column=0,
+            padx=(0, 16),
+        )
+
+        ttk.Button(
+            button_frame,
+            text="Cancel",
+            command=self._cancel,
+        ).grid(
+            row=0,
+            column=1,
             padx=(0, 8),
         )
 
         ttk.Button(
             button_frame,
-            text="Guardar",
+            text="Save",
             command=self._save,
         ).grid(
             row=0,
-            column=1,
+            column=2,
         )
 
         self.bind("<Escape>", self._on_cancel)
@@ -189,14 +107,6 @@ class TextEditorWindow(tk.Toplevel):
         self._text.insert("1.0", text)
 
     def show(self) -> None:
-        """
-        Muestra la ventana y activa el comportamiento modal.
-
-        El orden es importante:
-        1. Mostrar.
-        2. Esperar a que sea visible.
-        3. Tomar el grab.
-        """
         self.update_idletasks()
         self._center_on_screen()
 
@@ -227,12 +137,14 @@ class TextEditorWindow(tk.Toplevel):
 
         self.result_text = current_text
         self.was_modified = current_text != self._original_text
+        self.post_edit_biblatex_escape = self._post_edit_biblatex_escape.get()
 
         self._close()
 
     def _cancel(self) -> None:
         self.result_text = self._original_text
         self.was_modified = False
+        self.post_edit_biblatex_escape = False
 
         self._close()
 
@@ -254,27 +166,24 @@ class TextEditorWindow(tk.Toplevel):
 
 
 class TextEditorDriver:
-    """Administra Tkinter y expone la operación de edición."""
-
     def edit(
         self,
         text: str,
         *,
-        title: str = "Editor de texto",
-    ) -> tuple[str, bool]:
+        title: str = "Entry preview",
+    ) -> tuple[str, bool, bool]:
 
         if threading.current_thread() is not threading.main_thread():
             raise RuntimeError(
-                "TextEditorDriver.edit() debe ejecutarse "
-                "desde el hilo principal."
+                "TextEditorDriver.edit() must be executed "
+                "from main thread"
             )
 
         try:
             root = tk.Tk()
         except tk.TclError as error:
             raise RuntimeError(
-                "No fue posible iniciar la interfaz gráfica. "
-                "Verifica que exista un servidor gráfico disponible."
+                "GUI was not instanciated "
             ) from error
 
         root.withdraw()
@@ -291,15 +200,11 @@ class TextEditorDriver:
             signum: int,
             frame: Optional[FrameType],
         ) -> None:
-            # Se agenda el cierre dentro del ciclo de eventos de Tk.
             if window.winfo_exists():
                 window.after_idle(window._cancel)
 
         def signal_poll() -> None:
-            """
-            Obliga a Tkinter a regresar periódicamente al intérprete de
-            Python para que Ctrl+C pueda procesarse.
-            """
+            #NOTE for development purposes
             if root.winfo_exists():
                 root.after(100, signal_poll)
 
@@ -310,7 +215,11 @@ class TextEditorDriver:
             window.show()
             root.wait_window(window)
 
-            return window.result_text, window.was_modified
+            return (
+                window.result_text,
+                window.was_modified,
+                window.post_edit_biblatex_escape,
+            )
 
         finally:
             signal.signal(signal.SIGINT, previous_sigint_handler)
@@ -319,8 +228,8 @@ class TextEditorDriver:
                 root.destroy()
 
 
-def process_text(text: str) -> tuple[str, bool]:
+def preview_entry_window(text: str) -> tuple[str, bool, bool]:
     return TextEditorDriver().edit(
         text,
-        title="Editar contenido",
+        title="New Entry Preview and Edition",
     )

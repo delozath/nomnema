@@ -291,3 +291,49 @@ FEATURE: Agregar referencia [ERROR]
 Backlog / futuro (no bloquea la implementación actual):
 
 - **Análisis de abstract con Qwen local para tópico y relevancia** — a partir del abstract ya extraído (Abstract Review Service), sugerir automáticamente tópico y score de relevancia. Requeriría `Abstract Analyzer Interface` + adapter.
+
+
+
+## Analisis de implementación del orquestador
+Analicé el orquestador sin modificar el archivo, respetando la instrucción del propio TODO. Los puntos pendientes más importantes son:
+Resultados remotos sin validar
+DOI vacío cuando no se encuentra.
+BibTeX vacío, malformado, con múltiples entradas o sin campos obligatorios.
+El abstract ausente devuelve None, pero solo se comprueba == ""; después falla el sanitizador.
+Conviene validar ID, doi, title, author y abstract.
+
+Rutas construidas con datos no confiables
+entry["ID"] y fname_suffix se usan directamente en rutas.
+Un identificador con /, .. o una ruta absoluta podría salir de destination.
+BibKeyNormalizer está importado, pero no se utiliza.
+También falta validar que origin sea un PDF y que destino/BibTeX tengan permisos adecuados.
+
+Duplicados insuficientemente controlados
+La comparación de DOI no normaliza mayúsculas, prefijos ni espacios.
+Solo ocurre antes de abrir el editor; el usuario puede cambiar el DOI a uno duplicado.
+Tampoco se valida una colisión de ID.
+Una base vacía o con entradas sin doi puede romper BiblatexDriver al construir la caché.
+
+Cancelar la ventana no cancela la operación
+Cerrar o pulsar “Cancel” devuelve la entrada original como no modificada y el flujo continúa moviendo el archivo y guardándolo.
+
+Persistencia no transaccional
+Primero se mueve el documento, luego se actualiza el BibTeX y finalmente se crea el Markdown.
+Si falla el guardado del BibTeX o Markdown, queda un estado parcial difícil de recuperar.
+El Markdown existente se sobrescribe sin comprobación.
+Hay una condición de carrera entre comprobar el destino y ejecutar move().
+
+Edición sin validación posterior
+_sanitize_edited() supone que existe exactamente una entrada y que contiene abstract.
+No vuelve a validar DOI, campos requeridos, clave bibliográfica ni rutas después de editar.
+
+Configuración y servicios
+Solo se comprueba None; faltan valores vacíos y tipos incorrectos.
+fname_suffix se accede como atributo y puede faltar.
+El correo de Crossref/PubMed está hardcodeado como omar@mail.net.
+Un error de red de un proveedor de abstracts detiene la cadena en lugar de intentar el siguiente.
+
+Cobertura
+No existen pruebas del orquestador. Los casos prioritarios serían: DOI/abstract/BibTeX ausentes, cancelación, edición inválida, DOI duplicado después de editar, colisiones de archivos y fallos parciales de persistencia.
+
+El riesgo inmediato más claro está en [retrieve_orchestrator.py (line 126)](/home/omarpr/git/pynaptics/nomnema/src/nomnema/services/retrieve_orchestrator.py:126): FetchAbstractChain devuelve None al agotar proveedores, pero esa condición no se detecta. No retiré el comentario porque hacerlo contradiría expresamente su instrucción de no editar.
