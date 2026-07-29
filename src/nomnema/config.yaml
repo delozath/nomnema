@@ -3,3 +3,8 @@ doi: null
 origin: home
 destination: home/pdfs
 fname_suffix: ''
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .
