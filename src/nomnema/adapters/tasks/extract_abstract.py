@@ -60,7 +60,7 @@ class FetchAbstractFromPubMedDOI(BaseURLRequest):
         else:
             abstract = self._fetch_abstract_from_pubmed(pmid, email)
             if abstract is None:
-                return
+                return 
             else:
                 return abstract
 

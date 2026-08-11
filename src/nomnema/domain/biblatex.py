@@ -11,8 +11,11 @@ class BiblatexDriver:
 
         with open (bib_path, 'r', encoding='utf-8') as bib_file:
             self.bib_db = bibtexparser.load(bib_file, parser=self.parser)
-
-        self.cache_unique_doi = pd.DataFrame(self.bib_db.entries)['doi'].to_list()
+        
+        if self.bib_db.entries:
+            self.cache_unique_doi = pd.DataFrame(self.bib_db.entries)['doi'].to_list()
+        else:
+            self.cache_unique_doi = []  
         self.bib_path = bib_path
     
     def entry2parser(self, bib_entry):

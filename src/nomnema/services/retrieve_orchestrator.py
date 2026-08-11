@@ -63,6 +63,7 @@ class RetrieveOrchestrator(BaseService):
         doi_candidate, origin = self._get_doi()
         entry_candidate = self.fetch_bib_entry.perform(doi_candidate, timeout_s=10.0)
         abstract_candidate = self._get_abstract(doi_candidate)
+        breakpoint()
 
 
         entry_preview = self.bib_driver.append_abstract(entry_candidate, abstract_candidate)
@@ -123,9 +124,9 @@ class RetrieveOrchestrator(BaseService):
         fetch_chain = FetchAbstractChain(doi_candidate, 'omar@mail.net')
         abstract_candidate, log_abstract_fetch = fetch_chain.run(clear=True)
 
-        if abstract_candidate=="":
+        if abstract_candidate is None:
             raise ValueError(f"Failed to retrieve abstract for doi: {doi_candidate}")
-
+        
         abstract_candidate = self.entry_text_sanitizer(abstract_candidate)
         abstract_candidate = self.entry_bib_escaper(abstract_candidate, field='abstract')
         return abstract_candidate
