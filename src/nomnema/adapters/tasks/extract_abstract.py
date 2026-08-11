@@ -161,6 +161,7 @@ class FetchAbstractFromCrossrefDOI(BaseURLRequest):
 
         abstract = record.get("abstract")
         if not abstract:
+            print(f"No CrossRef record found for DOI: {content}")
             return
 
         if clean:
