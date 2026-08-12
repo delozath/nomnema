@@ -19,6 +19,7 @@ class TextEditorWindow(tk.Toplevel):
         self.result_text = text
         self.was_modified = False
         self.post_edit_biblatex_escape = False
+        self.was_cancelled = False
 
         self.title(title)
         self.geometry("800x600")
@@ -138,6 +139,7 @@ class TextEditorWindow(tk.Toplevel):
         self.result_text = current_text
         self.was_modified = current_text != self._original_text
         self.post_edit_biblatex_escape = self._post_edit_biblatex_escape.get()
+        self.was_cancelled = False
 
         self._close()
 
@@ -145,6 +147,7 @@ class TextEditorWindow(tk.Toplevel):
         self.result_text = self._original_text
         self.was_modified = False
         self.post_edit_biblatex_escape = False
+        self.was_cancelled = True
 
         self._close()
 
@@ -171,7 +174,7 @@ class TextEditorDriver:
         text: str,
         *,
         title: str = "Entry preview",
-    ) -> tuple[str, bool, bool]:
+    ) -> Optional[tuple[str, bool, bool]]:
 
         if threading.current_thread() is not threading.main_thread():
             raise RuntimeError(
@@ -215,6 +218,9 @@ class TextEditorDriver:
             window.show()
             root.wait_window(window)
 
+            if window.was_cancelled:
+                return None
+
             return (
                 window.result_text,
                 window.was_modified,
@@ -228,7 +234,7 @@ class TextEditorDriver:
                 root.destroy()
 
 
-def preview_entry_window(text: str) -> tuple[str, bool, bool]:
+def preview_entry_window(text: str) -> Optional[tuple[str, bool, bool]]:
     return TextEditorDriver().edit(
         text,
         title="New Entry Preview and Edition",
