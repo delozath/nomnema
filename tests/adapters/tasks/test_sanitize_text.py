@@ -61,6 +61,7 @@ class TestNamesNoChangeWithinText:
                ("Texto™ simple", "Texto™ simple"),
                ("Hola    mundo", "Hola mundo"),
                ("Texto con espacio", "Texto con espacio"),
+               ("Hola.mundo", "Hola. mundo"),
             ],
         )
     def test_different_not_valida_charactes(self, test_word, expected):

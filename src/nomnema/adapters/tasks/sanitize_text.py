@@ -41,7 +41,9 @@ class EntryTextSanitizer:
             elif char.isspace():
                 pending_space = bool(output)
 
-        return "".join(output)
+        cleaned = "".join(output)
+        cleaned = self._clean_punctuation(cleaned)
+        return cleaned
 
     def _canonicalize(self, text: str) -> str:
         text = ud.normalize(self.normalization, text)
@@ -56,6 +58,9 @@ class EntryTextSanitizer:
             ud.category(char)[0] in {"L", "M", "N"}
             or char in self.punctuation
         )
+
+    def _clean_punctuation(self, text):
+        return re.sub(r'(\.)([\w])', r'. \2', text)
 
 
 @dataclass(frozen=True, slots=True)
