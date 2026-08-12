@@ -59,11 +59,10 @@ class RetrieveOrchestrator(BaseService):
     def run(self, *args, **kwargs):
         # file_biblatex = LocalFolderStorageValidation(self.pfname).perform(mode="check")
         #origin = LocalFileStorageValidation(self.origin).perform(mode="check")
-        
         doi_candidate, origin = self._get_doi()
         entry_candidate = self.fetch_bib_entry.perform(doi_candidate, timeout_s=10.0)
         abstract_candidate = self._get_abstract(doi_candidate)
-
+        
         entry_preview = self.bib_driver.append_abstract(entry_candidate, abstract_candidate)
 
         if entry_preview['doi'] in self.bib_driver.cache_unique_doi:
@@ -115,8 +114,12 @@ class RetrieveOrchestrator(BaseService):
             LocalFileStorageValidation(origin)
                 .perform(mode="check")
             )
-        doi_candidate = ExtractDOIfromMarkdown.perform(origin)
-        return doi_candidate, origin
+        
+        if self.cfg.doi:
+            return self.cfg.doi, origin
+        else:
+            doi_candidate = ExtractDOIfromMarkdown.perform(origin)
+            return doi_candidate, origin
 
     def _get_abstract(self, doi_candidate):
         fetch_chain = FetchAbstractChain(doi_candidate, 'omar@mail.net')
