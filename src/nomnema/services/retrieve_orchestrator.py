@@ -115,11 +115,12 @@ class RetrieveOrchestrator(BaseService):
                 .perform(mode="check")
             )
         
-        if self.cfg.doi:
-            return self.cfg.doi, origin
-        else:
-            doi_candidate = ExtractDOIfromMarkdown.perform(origin)
-            return doi_candidate, origin
+        doi = self.cfg.get("doi", None)
+        if doi:
+            return doi, origin
+
+        doi_candidate = ExtractDOIfromMarkdown.perform(origin)
+        return doi_candidate, origin
 
     def _get_abstract(self, doi_candidate):
         fetch_chain = FetchAbstractChain(doi_candidate, 'omar@mail.net')
