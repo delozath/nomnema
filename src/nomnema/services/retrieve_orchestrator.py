@@ -70,7 +70,10 @@ class RetrieveOrchestrator(BaseService):
             raise ValueError(f"Duplicate DOI found: {entry_preview['doi']}")
 
         bib_entry_preview = self.bib_driver.dict_to_bibtex(entry_preview)
-        bib_entry_edited, modified, bib_esc_flag = preview_entry_window(bib_entry_preview)
+        bib_entry_edited, modified, bib_esc_flag, cancelled = preview_entry_window(bib_entry_preview)
+
+        if cancelled:
+            return
 
         if modified:
             entry = self._sanitize_edited(bib_entry_edited, bib_esc_flag)
