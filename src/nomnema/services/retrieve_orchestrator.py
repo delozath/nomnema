@@ -1,6 +1,7 @@
 from omegaconf import DictConfig
 
 from shutil import move
+import re
 
 from nomnema.ports.core import BaseService
 
@@ -63,6 +64,7 @@ class RetrieveOrchestrator(BaseService):
         doi_candidate, origin = self._get_doi()
         entry_candidate = self.fetch_bib_entry.perform(doi_candidate, timeout_s=10.0)
         abstract_candidate = self._get_abstract(doi_candidate)
+        abstract_candidate = self._format_abstract(abstract_candidate)
 
         entry_preview = self.bib_driver.append_abstract(entry_candidate, abstract_candidate)
 
@@ -132,6 +134,9 @@ class RetrieveOrchestrator(BaseService):
         abstract_candidate = self.entry_text_sanitizer(abstract_candidate)
         abstract_candidate = self.entry_bib_escaper(abstract_candidate, field='abstract')
         return abstract_candidate
+
+    def _format_abstract(self, abstract):
+        return re.sub(r"\.(?=[^\W\d_])", ". ", abstract)
 
     def _sanitize_edited(self, entry_edited, bib_esc_flag):
         parse = self.bib_driver.entry2parser(entry_edited).entries[0]
