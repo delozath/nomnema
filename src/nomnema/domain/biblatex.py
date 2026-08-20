@@ -18,17 +18,6 @@ class BiblatexDriver:
             self.cache_unique_doi = []  
         self.bib_path = bib_path
     
-    def entry2parser(self, bib_entry):
-        parser = BibTexParser(interpolate_strings=False)
-        bib_parsed = bibtexparser.loads(bib_entry, parser=parser) 
-        return bib_parsed
-
-    def append_abstract(self, bib_entry, abstract):
-        bib_parsed = self.entry2parser(bib_entry)
-        bib_parsed.entries[0]['abstract'] = abstract
-
-        return bib_parsed.entries[0]
-
     def add_entry(self, entry):
         self.bib_db.entries.append(entry)
         self.cache_unique_doi.append(entry['doi'])
@@ -42,3 +31,22 @@ class BiblatexDriver:
     def save(self):
         with open(self.bib_path, 'w') as writer:
             bibtexparser.dump(self.bib_db, writer)
+
+
+class BibEntryParser:
+    def __init__(self):
+        self.parser = BibTexParser(interpolate_strings=False)
+    
+    def __call__(self, bib_entry: str) -> dict:
+        if not isinstance(bib_entry, str):
+            raise TypeError(f"bib_entry must be str, `{type(bib_entry)}` type was passed")
+        bib_parsed = bibtexparser.loads(bib_entry, parser=self.parser) 
+        return bib_parsed.entries[0]
+
+    def append_field(self, bib_entry, field, value):
+        if isinstance(bib_entry, str):
+            bib_entry =  self(bib_entry)
+        elif not isinstance(bib_entry, dict):
+            raise TypeError(f"bib_entry must be str, `{type(bib_entry)}` type was passed")
+        bib_entry[field] = value
+        return bib_entry

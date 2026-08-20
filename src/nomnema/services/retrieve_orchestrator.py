@@ -3,6 +3,14 @@ from omegaconf import DictConfig
 from shutil import move
 import re
 
+("‘", "'"),
+("’", "'"),
+("ʼ", "'"),
+("ʻ", "'"),
+("‐", "-"),
+("‒", "-"),
+    
+
 from nomnema.ports.core import BaseService
 
 from nomnema.storage.local_storage_validation import (
@@ -27,7 +35,7 @@ from nomnema.adapters.tasks.sanitize_text import (
     BibKeyNormalizer
 )
 
-from nomnema.domain.biblatex import BiblatexDriver
+from nomnema.domain.biblatex import BiblatexDriver, BibEntryParser
 
 from nomnema.domain.gui.entry_preview import preview_entry_window
 
@@ -56,16 +64,29 @@ class RetrieveOrchestrator(BaseService):
         self.entry_text_sanitizer = EntryTextSanitizer()
         self.entry_bib_escaper = BibLaTeXEscaper()
         self.bib_driver = BiblatexDriver(bib_path=self.bib_db_path)
+        self.bib_entry_driver = BibEntryParser()
     
     def run(self, *args, **kwargs):
         # file_biblatex = LocalFolderStorageValidation(self.pfname).perform(mode="check")
         #origin = LocalFileStorageValidation(self.origin).perform(mode="check")
         
         doi_candidate, origin = self._get_doi()
-        entry_candidate = self.fetch_bib_entry.perform(doi_candidate, timeout_s=10.0)
+
+        entry_candidate_str = self.fetch_bib_entry.perform(doi_candidate, timeout_s=10.0)
+        if  (grp := self.cfg.group)!="":
+            entry = self.bib_entry_driver.append_field(
+                entry_candidate_str,
+                'groups',
+                grp
+            )
+        else:
+            entry = self.bib_entry_driver(entry_candidate_str)
+
         abstract_candidate = self._get_abstract(doi_candidate)
         abstract_candidate = self._format_abstract(abstract_candidate)
 
+        entry['pages'] = entry['pages'].replace('–', '-')
+        breakpoint()
         entry_preview = self.bib_driver.append_abstract(entry_candidate, abstract_candidate)
 
         if entry_preview['doi'] in self.bib_driver.cache_unique_doi:

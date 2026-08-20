@@ -3,6 +3,7 @@ doi: null
 origin: home
 destination: home/pdfs
 fname_suffix: ''
+group: ''
 
 hydra:
   output_subdir: null
