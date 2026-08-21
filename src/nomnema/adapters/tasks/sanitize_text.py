@@ -9,7 +9,8 @@ from nomnema.domain.const import (
     DEFAULT_PUNCTUATION,
     BIBLATEX_ESCAPE,
     BIBLATEX_VERBATIM_FIELDS,
-    NAME_SPECIAL_LETTERS
+    NAME_SPECIAL_LETTERS,
+    BIBLATEX_SHORT_ESCAPE
 )
 
 
@@ -77,6 +78,16 @@ class BibLaTeXEscaper:
             return text
 
         return text.translate(BIBLATEX_ESCAPE)
+
+
+class BibEntryShortNormalizer:
+    def __call__(self, text: str) -> str:
+        if not isinstance(text, str):
+            raise TypeError(
+                f"Expected str, got {type(text).__name__}"
+            )
+        
+        return text.translate(BIBLATEX_SHORT_ESCAPE)
 
 
 @dataclass(frozen=True, slots=True)

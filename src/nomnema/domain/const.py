@@ -198,3 +198,13 @@ BIBLATEX_VERBATIM_FIELDS = frozenset({
     "file",
     "url",
 })
+
+BIBLATEX_SHORT_ESCAPE =  str.maketrans({
+    "‘": "'",
+    "’": "'",
+    "ʼ": "'",
+    "ʻ": "'",
+    "‐": "-",
+    "‒": "-",
+    "–": "-"
+})

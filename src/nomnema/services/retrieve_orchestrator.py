@@ -2,14 +2,7 @@ from omegaconf import DictConfig
 
 from shutil import move
 import re
-
-("‘", "'"),
-("’", "'"),
-("ʼ", "'"),
-("ʻ", "'"),
-("‐", "-"),
-("‒", "-"),
-    
+   
 
 from nomnema.ports.core import BaseService
 
@@ -32,7 +25,8 @@ from nomnema.adapters.tasks.extract_abstract import (
 from nomnema.adapters.tasks.sanitize_text import (
     EntryTextSanitizer,
     BibLaTeXEscaper,
-    BibKeyNormalizer
+    BibKeyNormalizer,
+    BibEntryShortNormalizer
 )
 
 from nomnema.domain.biblatex import BiblatexDriver, BibEntryParser
@@ -63,6 +57,8 @@ class RetrieveOrchestrator(BaseService):
         self.fetch_bib_entry = FetchBibEntryfromDOI2Bibtex()
         self.entry_text_sanitizer = EntryTextSanitizer()
         self.entry_bib_escaper = BibLaTeXEscaper()
+        self.entry_snorm = BibEntryShortNormalizer()
+        self.bibkey_norm = BibKeyNormalizer()
         self.bib_driver = BiblatexDriver(bib_path=self.bib_db_path)
         self.bib_entry_driver = BibEntryParser()
     
@@ -83,34 +79,25 @@ class RetrieveOrchestrator(BaseService):
             entry = self.bib_entry_driver(entry_candidate_str)
 
         abstract_candidate = self._get_abstract(doi_candidate)
-        abstract_candidate = self._format_abstract(abstract_candidate)
+        entry = self._compose_entry(entry, abstract_candidate)
 
-        entry['pages'] = entry['pages'].replace('–', '-')
-        breakpoint()
-        entry_preview = self.bib_driver.append_abstract(entry_candidate, abstract_candidate)
+        if entry['doi'] in self.bib_driver.cache_unique_doi:
+            raise ValueError(f"Duplicate DOI found: {entry['doi']}")
 
-        if entry_preview['doi'] in self.bib_driver.cache_unique_doi:
-            raise ValueError(f"Duplicate DOI found: {entry_preview['doi']}")
-
-        bib_entry_preview = self.bib_driver.dict_to_bibtex(entry_preview)
-        bib_entry_edited, modified, bib_esc_flag, cancelled = preview_entry_window(bib_entry_preview)
+        entry_id = entry['ID']
+        entry_preview = self.bib_driver.dict_to_bibtex(entry)
+        entry_edited, modified, bib_esc_flag, cancelled = preview_entry_window(entry_preview)
 
         if cancelled:
             return
 
         if modified:
-            entry = self._sanitize_edited(bib_entry_edited, bib_esc_flag)
+            entry = self._sanitize_edited(entry_edited, bib_esc_flag)
         else:
             entry = entry_preview
-        
-        mv_folder = (self.destination/f"{entry['ID']}").as_posix()
-        mv_folder = (
-            LocalFolderStorageValidation(
-                mv_folder,
-            ).perform(mode="create")
-        )
-        fname = entry['ID'] + self.cfg.fname_suffix
-        new_loc = mv_folder/f"{fname}{origin.suffix}"
+
+        new_loc = self._check_folder_structure(entry_id, origin)
+        entry = self.bib_entry_driver(entry)
         try:
             new_loc = (
                 LocalFileStorageValidation(new_loc.as_posix())
@@ -118,20 +105,49 @@ class RetrieveOrchestrator(BaseService):
                 )
         except FileNotFoundError:
             move(origin, new_loc)
-            entry['file'] = f":{new_loc.parent.name}/{new_loc.name}:{new_loc.suffix[1:].upper()}"
-            self.bib_driver.add_entry(entry)
-            self.bib_driver.save()
+            self._store_bib_file(entry, new_loc)
+            self._create_entry_markdown(entry, new_loc)
+        else:
+            raise FileExistsError(f"File already exists, set the `fname_suffix` parameter to solve it")
+
+    def _store_bib_file(self, entry, new_loc):
+        entry['file'] = f":{new_loc.parent.name}/{new_loc.name}:{new_loc.suffix[1:].upper()}"
+        self.bib_driver.add_entry(entry)
+        self.bib_driver.save()
+        print(f"\n\nBiblatex file stored at\n----> {new_loc}")
+
+    def _create_entry_markdown(self, entry, new_loc):
             markdown = (
                 f"# {entry['title']}\n\n"
                 f"**Authors:** {entry['author']}\n\n"
                 f"**DOI:** {entry['doi']}\n\n"
                 f"## Abstract\n\n{entry['abstract']}\n"
             )
-            new_loc.with_suffix(".md").write_text(markdown, encoding="utf-8")
             
-            print("Data stored")
-        else:
-            raise FileExistsError(f"File already exists, set the `fname_suffix` parameter to solve it")
+            if new_loc.with_suffix(".md").exists():
+                raise FileExistsError(f"File named `{new_loc.with_suffix(".md").name}` is already exists. Set hydra `suffix` flag to proceed")
+            new_loc.with_suffix(".md").write_text(markdown, encoding="utf-8")
+            print("Markdown stored")
+
+    def _check_folder_structure(self, entry_id, origin):
+        mv_folder = (self.destination/f"{entry_id}").as_posix()
+        mv_folder = (
+            LocalFolderStorageValidation(
+                mv_folder,
+            ).perform(mode="create")
+        )
+        fname = entry_id + self.cfg.fname_suffix
+        return mv_folder/f"{fname}{origin.suffix}"
+
+    def _compose_entry(self, entry, abstract_candidate):
+        abstract = self._format_abstract(abstract_candidate)        
+        entry['author'] = self.entry_snorm(entry['author'])
+        if (field:='pages') in entry:
+            entry[field] = self.entry_snorm(entry[field])
+
+        entry['ID'] = self._custom_bibkey(entry, sep='_')
+        entry['abstract'] = abstract
+        return entry
 
     def _get_doi(self):
         origin = self.cfg.get("origin", None)
@@ -165,3 +181,9 @@ class RetrieveOrchestrator(BaseService):
         if bib_esc_flag:
             parse['abstract'] = self.entry_bib_escaper(parse['abstract'], field='abstract')
         return parse
+
+    def _custom_bibkey(self, entry, sep='_'):
+        bibkey = entry['author'].split('and')[0]
+        bibkey = re.match(r'^[^ ,]+', bibkey)[0]
+        bibkey = self.bibkey_norm(bibkey)
+        return  bibkey + sep + entry['year']
