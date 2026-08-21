@@ -42,11 +42,3 @@ class BibEntryParser:
             raise TypeError(f"bib_entry must be str, `{type(bib_entry)}` type was passed")
         bib_parsed = bibtexparser.loads(bib_entry, parser=self.parser) 
         return bib_parsed.entries[0]
-
-    def append_field(self, bib_entry, field, value):
-        if isinstance(bib_entry, str):
-            bib_entry =  self(bib_entry)
-        elif not isinstance(bib_entry, dict):
-            raise TypeError(f"bib_entry must be str, `{type(bib_entry)}` type was passed")
-        bib_entry[field] = value
-        return bib_entry

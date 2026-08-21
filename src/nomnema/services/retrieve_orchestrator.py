@@ -69,15 +69,10 @@ class RetrieveOrchestrator(BaseService):
         doi_candidate, origin = self._get_doi()
 
         entry_candidate_str = self.fetch_bib_entry.perform(doi_candidate, timeout_s=10.0)
+        entry = self.bib_entry_driver(entry_candidate_str)
         if  (grp := self.cfg.group)!="":
-            entry = self.bib_entry_driver.append_field(
-                entry_candidate_str,
-                'groups',
-                grp
-            )
-        else:
-            entry = self.bib_entry_driver(entry_candidate_str)
-
+            entry['groups'] = grp
+        
         abstract_candidate = self._get_abstract(doi_candidate)
         entry = self._compose_entry(entry, abstract_candidate)
 
@@ -178,10 +173,11 @@ class RetrieveOrchestrator(BaseService):
         return re.sub(r"\.(?=[^\W\d_])", ". ", abstract)
 
     def _sanitize_edited(self, entry_edited, bib_esc_flag):
-        parse = self.bib_driver.entry2parser(entry_edited).entries[0]
+        parse = self.bib_entry_driver(entry_edited)
         parse['abstract'] = self.entry_text_sanitizer(parse['abstract'])
         if bib_esc_flag:
             parse['abstract'] = self.entry_bib_escaper(parse['abstract'], field='abstract')
+        
         return parse
 
     def _custom_bibkey(self, entry, sep='_'):
