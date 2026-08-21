@@ -144,7 +144,9 @@ class RetrieveOrchestrator(BaseService):
         entry['author'] = self.entry_snorm(entry['author'])
         if (field:='pages') in entry:
             entry[field] = self.entry_snorm(entry[field])
-
+        
+        entry['title'] = self.entry_snorm(entry['title'])
+        entry['author'] = self.entry_snorm(entry['author'])
         entry['ID'] = self._custom_bibkey(entry, sep='_')
         entry['abstract'] = abstract
         return entry
