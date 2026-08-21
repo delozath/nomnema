@@ -1,6 +1,6 @@
 *.csv#
 *.pyc
-*.env*
+*.env
 *.log
 justfile
 src/nomnema/experimental/
