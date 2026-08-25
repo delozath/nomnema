@@ -34,11 +34,13 @@ class BiblatexDriver:
 
 
 class BibEntryParser:
-    def __init__(self):
-        self.parser = BibTexParser(interpolate_strings=False)
-    
     def __call__(self, bib_entry: str) -> dict:
         if not isinstance(bib_entry, str):
             raise TypeError(f"bib_entry must be str, `{type(bib_entry)}` type was passed")
-        bib_parsed = bibtexparser.loads(bib_entry, parser=self.parser) 
-        return bib_parsed.entries[0]
+
+        self.parser = BibTexParser(interpolate_strings=False)
+        parsed = bibtexparser.loads(bib_entry, parser=self.parser)
+
+        if not parsed.entries:
+            raise ValueError("No BibTeX entry could be parsed")
+        return parsed.entries[0]

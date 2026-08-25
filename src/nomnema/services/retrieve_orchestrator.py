@@ -89,10 +89,9 @@ class RetrieveOrchestrator(BaseService):
         if modified:
             entry = self._sanitize_edited(entry_edited, bib_esc_flag)
         else:
-            entry = entry_preview
-
+            entry = self.bib_entry_driver(entry_preview)
+        
         new_loc = self._check_folder_structure(entry_id, origin)
-        entry = self.bib_entry_driver(entry)
         try:
             new_loc = (
                 LocalFileStorageValidation(new_loc.as_posix())
