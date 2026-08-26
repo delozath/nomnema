@@ -27,7 +27,7 @@ class FetchAbstractChain(BaseService):
             abstrac, info = cls().fetch(self.doi, self.email, clean=clean)
             if abstrac:
                 return abstrac, info, cls.__id__
-        return None, "Abstract not found"
+        return None, None, "Abstract not found"
 
 
 class BaseURLRequest(BaseExtractRemote[str, Optional[str]]):
@@ -56,11 +56,11 @@ class FetchAbstractFromPubMedDOI(BaseURLRequest):
     def fetch(self, content, email, **kwargs): # here content is the doi
         pmid = self._search_pmid_from_doi(content, email)
         if pmid is None:
-            return
+            return None, None
         else:
             abstract = self._fetch_abstract_from_pubmed(pmid, email)
             if abstract is None:
-                return 
+                return None, None
             else:
                 info = FetcherID(name='pmid', reference=pmid)
                 return abstract, info
@@ -163,7 +163,7 @@ class FetchAbstractFromCrossrefDOI(BaseURLRequest):
         abstract = record.get("abstract")
         if not abstract:
             print(f"No CrossRef record found for DOI: {content}")
-            return
+            return None, None
 
         info = FetcherID(name='crossref', reference="")
         if clean:

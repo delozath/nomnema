@@ -80,8 +80,7 @@ class RetrieveOrchestrator(BaseService):
             raise ValueError(f"Duplicate DOI found: {entry['doi']}")
 
         entry_id = entry['ID']
-        if info.name=='pmid' and info.reference!="":
-            entry[info.name] = info.reference
+        entry = self._add_pmid(entry, info)
         
         entry_preview = self.bib_driver.dict_to_bibtex(entry)
         entry_edited, modified, bib_esc_flag, cancelled = preview_entry_window(entry_preview)
@@ -106,6 +105,13 @@ class RetrieveOrchestrator(BaseService):
             self._create_entry_markdown(entry, new_loc)
         else:
             raise FileExistsError(f"File already exists, set the `fname_suffix` parameter to solve it")
+
+    def _add_pmid(self, entry, info):
+        if info:
+            if info.name=='pmid' and info.reference!="":
+                entry[info.name] = info.reference
+        #TODO: check if entry dict is passed by reference
+        return entry
 
     def _store_bib_file(self, entry, new_loc):
         entry['file'] = f":{new_loc.parent.name}/{new_loc.name}:{new_loc.suffix[1:].upper()}"
@@ -163,7 +169,7 @@ class RetrieveOrchestrator(BaseService):
         abstract_candidate, info, log_abstract_fetch = fetch_chain.run(clear=True)
 
         if abstract_candidate is None:
-            return ""
+            return "", ""
             #raise ValueError(f"Failed to retrieve abstract for doi: {doi_candidate}")
         
         abstract_candidate = self.entry_text_sanitizer(abstract_candidate)
