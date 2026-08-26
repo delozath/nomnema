@@ -67,7 +67,6 @@ class RetrieveOrchestrator(BaseService):
         #origin = LocalFileStorageValidation(self.origin).perform(mode="check")
         
         doi_candidate, origin = self._get_doi()
-
         entry_candidate_str = self.fetch_bib_entry.perform(doi_candidate, timeout_s=10.0)
         entry = self.bib_entry_driver(entry_candidate_str)
         if  (grp := self.cfg.group)!="":
@@ -161,7 +160,8 @@ class RetrieveOrchestrator(BaseService):
             LocalFileStorageValidation(origin)
                 .perform(mode="check")
             )
-        doi_candidate = ExtractDOIfromMarkdown.perform(origin)
+        
+        doi_candidate = self.cfg.doi if self.cfg.doi else ExtractDOIfromMarkdown.perform(origin)
         return doi_candidate, origin
 
     def _get_abstract(self, doi_candidate):
