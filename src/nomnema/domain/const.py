@@ -206,5 +206,6 @@ BIBLATEX_SHORT_ESCAPE =  str.maketrans({
     "ʻ": "'",
     "‐": "-",
     "‒": "-",
-    "–": "-"
+    "–": "-",
+    " ": " "
 })

@@ -67,19 +67,20 @@ class RetrieveOrchestrator(BaseService):
         #origin = LocalFileStorageValidation(self.origin).perform(mode="check")
         
         doi_candidate, origin = self._get_doi()
-
         entry_candidate_str = self.fetch_bib_entry.perform(doi_candidate, timeout_s=10.0)
         entry = self.bib_entry_driver(entry_candidate_str)
         if  (grp := self.cfg.group)!="":
             entry['groups'] = grp
         
-        abstract_candidate = self._get_abstract(doi_candidate)
+        abstract_candidate, info = self._get_abstract(doi_candidate)
         entry = self._compose_entry(entry, abstract_candidate)
 
         if entry['doi'] in self.bib_driver.cache_unique_doi:
             raise ValueError(f"Duplicate DOI found: {entry['doi']}")
 
         entry_id = entry['ID']
+        entry = self._add_pmid(entry, info)
+        
         entry_preview = self.bib_driver.dict_to_bibtex(entry)
         entry_edited, modified, bib_esc_flag, cancelled = preview_entry_window(entry_preview)
 
@@ -103,6 +104,13 @@ class RetrieveOrchestrator(BaseService):
             self._create_entry_markdown(entry, new_loc)
         else:
             raise FileExistsError(f"File already exists, set the `fname_suffix` parameter to solve it")
+
+    def _add_pmid(self, entry, info):
+        if info:
+            if info.name=='pmid' and info.reference!="":
+                entry[info.name] = info.reference
+        #TODO: check if entry dict is passed by reference
+        return entry
 
     def _store_bib_file(self, entry, new_loc):
         entry['file'] = f":{new_loc.parent.name}/{new_loc.name}:{new_loc.suffix[1:].upper()}"
@@ -130,8 +138,7 @@ class RetrieveOrchestrator(BaseService):
                 mv_folder,
             ).perform(mode="create")
         )
-        fname = entry_id + self.cfg.fname_suffix
-        return mv_folder/f"{fname}{origin.suffix}"
+        return mv_folder/f"{entry_id}{origin.suffix}"
 
     def _compose_entry(self, entry, abstract_candidate):
         abstract = self._format_abstract(abstract_candidate)        
@@ -153,20 +160,21 @@ class RetrieveOrchestrator(BaseService):
             LocalFileStorageValidation(origin)
                 .perform(mode="check")
             )
-        doi_candidate = ExtractDOIfromMarkdown.perform(origin)
+        
+        doi_candidate = self.cfg.doi if self.cfg.doi else ExtractDOIfromMarkdown.perform(origin)
         return doi_candidate, origin
 
     def _get_abstract(self, doi_candidate):
         fetch_chain = FetchAbstractChain(doi_candidate, 'omar@mail.net')
-        abstract_candidate, log_abstract_fetch = fetch_chain.run(clear=True)
+        abstract_candidate, info, log_abstract_fetch = fetch_chain.run(clear=True)
 
         if abstract_candidate is None:
-            return ""
+            return "", ""
             #raise ValueError(f"Failed to retrieve abstract for doi: {doi_candidate}")
         
         abstract_candidate = self.entry_text_sanitizer(abstract_candidate)
         abstract_candidate = self.entry_bib_escaper(abstract_candidate, field='abstract')
-        return abstract_candidate
+        return abstract_candidate, info
 
     def _format_abstract(self, abstract):
         return re.sub(r"\.(?=[^\W\d_])", ". ", abstract)
@@ -183,4 +191,4 @@ class RetrieveOrchestrator(BaseService):
         bibkey = entry['author'].split('and')[0]
         bibkey = re.match(r'^[^ ,]+', bibkey)[0]
         bibkey = self.bibkey_norm(bibkey)
-        return  bibkey + sep + entry['year']
+        return  bibkey + sep + entry['year'] + self.cfg.fname_suffix
