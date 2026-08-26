@@ -73,13 +73,16 @@ class RetrieveOrchestrator(BaseService):
         if  (grp := self.cfg.group)!="":
             entry['groups'] = grp
         
-        abstract_candidate = self._get_abstract(doi_candidate)
+        abstract_candidate, info = self._get_abstract(doi_candidate)
         entry = self._compose_entry(entry, abstract_candidate)
 
         if entry['doi'] in self.bib_driver.cache_unique_doi:
             raise ValueError(f"Duplicate DOI found: {entry['doi']}")
 
         entry_id = entry['ID']
+        if info.name=='pmid' and info.reference!="":
+            entry[info.name] = info.reference
+        
         entry_preview = self.bib_driver.dict_to_bibtex(entry)
         entry_edited, modified, bib_esc_flag, cancelled = preview_entry_window(entry_preview)
 
@@ -158,7 +161,7 @@ class RetrieveOrchestrator(BaseService):
 
     def _get_abstract(self, doi_candidate):
         fetch_chain = FetchAbstractChain(doi_candidate, 'omar@mail.net')
-        abstract_candidate, log_abstract_fetch = fetch_chain.run(clear=True)
+        abstract_candidate, info, log_abstract_fetch = fetch_chain.run(clear=True)
 
         if abstract_candidate is None:
             return ""
@@ -166,7 +169,7 @@ class RetrieveOrchestrator(BaseService):
         
         abstract_candidate = self.entry_text_sanitizer(abstract_candidate)
         abstract_candidate = self.entry_bib_escaper(abstract_candidate, field='abstract')
-        return abstract_candidate
+        return abstract_candidate, info
 
     def _format_abstract(self, abstract):
         return re.sub(r"\.(?=[^\W\d_])", ". ", abstract)

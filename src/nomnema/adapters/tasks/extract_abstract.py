@@ -4,7 +4,7 @@ from typing import Optional, override
 import requests
 import xml.etree.ElementTree as ET
 
-from nomnema.ports.core import BaseService, BaseExtractRemote
+from nomnema.ports.core import BaseService, BaseExtractRemote, FetcherID
 from nomnema.domain.validation.doi import normalize_doi
 from nomnema.domain.validation import email
 
@@ -24,9 +24,9 @@ class FetchAbstractChain(BaseService):
     def run(self, /, **kwargs):
         clean = kwargs.get('clear', False)
         for cls in self.chain:
-            abstrac = cls().fetch(self.doi, self.email, clean=clean)
+            abstrac, info = cls().fetch(self.doi, self.email, clean=clean)
             if abstrac:
-                return abstrac, cls.__id__
+                return abstrac, info, cls.__id__
         return None, "Abstract not found"
 
 
@@ -62,7 +62,8 @@ class FetchAbstractFromPubMedDOI(BaseURLRequest):
             if abstract is None:
                 return 
             else:
-                return abstract
+                info = FetcherID(name='pmid', reference=pmid)
+                return abstract, info
 
     def _search_pmid_from_doi(self, doi, email):
         search_url = f"{FetchAbstractFromPubMedDOI.BASE_URL}esearch.fcgi"
@@ -144,7 +145,7 @@ class FetchAbstractFromCrossrefDOI(BaseURLRequest):
     BASE_URL = "https://api.crossref.org/works"
 
     @override
-    def fetch(self, content: str, email: str, *args, clean=False, **kwargs) -> str | None:
+    def fetch(self, content: str, email: str, *args, clean=False, **kwargs) -> tuple[str, FetcherID] | None:
         url = f"{FetchAbstractFromCrossrefDOI.BASE_URL}/{content}"
         params = {
             "mailto": email
@@ -164,10 +165,11 @@ class FetchAbstractFromCrossrefDOI(BaseURLRequest):
             print(f"No CrossRef record found for DOI: {content}")
             return
 
+        info = FetcherID(name='crossref', reference="")
         if clean:
-            return self._clean_text(abstract)
+            return self._clean_text(abstract), info
         
-        return abstract
+        return abstract, info
     
     def _clean_text(self, text):
         text = re.sub(

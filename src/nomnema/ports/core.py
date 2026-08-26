@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from ast import Tuple
+from dataclasses import dataclass
 
 class BaseService[T](ABC):
     @abstractmethod
@@ -10,11 +12,17 @@ class BaseExtract[S, T](ABC):
     def perform(self, content: S, *args, **kwargs) -> T:
         raise NotImplementedError("method must be implemented")
 
+#TODO: integrate all connection requierements to this dataclass
+@dataclass
+class FetcherID:
+    name: str
+    reference: str | int 
+
 class BaseExtractRemote[S, T](ABC):
     __id__: str
     
     @abstractmethod
-    def fetch(self, content: S, *args, **kwargs) -> T:
+    def fetch(self, content: S, *args, **kwargs) -> tuple[T, FetcherID] | None:
         raise NotImplementedError("method must be implemented")
 
 class BaseFactory[T](ABC):
