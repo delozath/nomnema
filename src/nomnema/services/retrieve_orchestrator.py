@@ -133,8 +133,7 @@ class RetrieveOrchestrator(BaseService):
                 mv_folder,
             ).perform(mode="create")
         )
-        fname = entry_id + self.cfg.fname_suffix
-        return mv_folder/f"{fname}{origin.suffix}"
+        return mv_folder/f"{entry_id}{origin.suffix}"
 
     def _compose_entry(self, entry, abstract_candidate):
         abstract = self._format_abstract(abstract_candidate)        
@@ -186,4 +185,4 @@ class RetrieveOrchestrator(BaseService):
         bibkey = entry['author'].split('and')[0]
         bibkey = re.match(r'^[^ ,]+', bibkey)[0]
         bibkey = self.bibkey_norm(bibkey)
-        return  bibkey + sep + entry['year']
+        return  bibkey + sep + entry['year'] + self.cfg.fname_suffix
